@@ -11,26 +11,44 @@ const (
 	SERVER_TYPE = "tcp"
 )
 
+var id byte = 0
+
+func listen(conn net.Conn) {
+	clientid := id
+	ids := make([]byte, 1)
+	ids[0] = id
+	_, err := conn.Write(ids)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Client connected with ID = %d\n", id)
+	id = id + 1
+
+	for {
+		buffer := make([]byte, 1024)
+		n, err := conn.Read(buffer)
+		if err != nil {
+			fmt.Printf("Client ID %d closed\n", clientid)
+			id = id - 1
+			break
+		}
+		fmt.Print(string(buffer[:n]))
+	}
+}
+
 func main() {
 	listener, err := net.Listen(SERVER_TYPE, SERVER_HOST+":"+SERVER_PORT)
 	if err != nil {
 		panic(err)
 	}
-	defer listener.Close()
-	fmt.Println("Listening on " + SERVER_HOST + ":" + SERVER_PORT)
-
-	conn, err := listener.Accept()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(conn.RemoteAddr().String())
-
 	for {
-		bytes := make([]byte, 1024)
-		n, err := conn.Read(bytes)
+		conn, err := listener.Accept()
+		defer listener.Close()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(string(bytes[:n]))
+		fmt.Println("Listening on " + SERVER_HOST + ":" + SERVER_PORT)
+
+		go listen(conn)
 	}
 }
